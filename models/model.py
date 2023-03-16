@@ -10,6 +10,7 @@ import torch.nn.utils.rnn as tnnur
 
 import models.vocabulary as mv
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class RNN(tnn.Module):
     """
@@ -56,7 +57,7 @@ class RNN(tnn.Module):
         batch_size = padded_seqs.size(0)
         if hidden_state is None:
             size = (self.num_layers, batch_size, self.num_dimensions)
-            hidden_state = [torch.zeros(*size).cuda(), torch.zeros(*size).cuda()]
+            hidden_state = [torch.zeros(*size).to(device), torch.zeros(*size).to(device)]
 
         padded_encoded_seqs = self._embedding(padded_seqs)  # (batch,seq,embedding)
         packed_encoded_seqs = tnnur.pack_padded_sequence(
@@ -107,7 +108,7 @@ class Model:
 
         self.network = RNN(**network_params)
         if torch.cuda.is_available() and not no_cuda:
-            self.network.cuda()
+            self.network.to(device)
 
         self.nll_loss = tnn.NLLLoss(reduction="none", ignore_index=0)
 
@@ -181,12 +182,12 @@ class Model:
         :param num: Number of SMILES to sample.
         :return: An iterator with (smiles, likelihood) pairs
         """
-        input_vector = torch.full((num, 1), self.vocabulary["^"], dtype=torch.long).cuda()  # (batch, 1)
-        seq_lengths = torch.ones(num).cuda()  # (batch)
+        input_vector = torch.full((num, 1), self.vocabulary["^"], dtype=torch.long).to(device)  # (batch, 1)
+        seq_lengths = torch.ones(num).to(device)  # (batch)
         sequences = []
         hidden_state = None
-        nlls = torch.zeros(num).cuda()
-        not_finished = torch.ones(num, 1, dtype=torch.long).cuda()
+        nlls = torch.zeros(num).to(device)
+        not_finished = torch.ones(num, 1, dtype=torch.long).to(device)
         for _ in range(self.max_sequence_length - 1):
             logits, hidden_state = self.network(input_vector, seq_lengths, hidden_state)  # (batch, 1, voc)
             probs = logits.softmax(dim=2).squeeze()  # (batch, voc)
