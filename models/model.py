@@ -183,7 +183,7 @@ class Model:
         :return: An iterator with (smiles, likelihood) pairs
         """
         input_vector = torch.full((num, 1), self.vocabulary["^"], dtype=torch.long).to(device)  # (batch, 1)
-        seq_lengths = torch.ones(num).to(device)  # (batch)
+        seq_lengths = torch.ones(num)  # (batch)
         sequences = []
         hidden_state = None
         nlls = torch.zeros(num).to(device)
